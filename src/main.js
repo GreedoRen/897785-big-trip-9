@@ -2,9 +2,9 @@ import { Info } from './components/info';
 import { Menu } from './components/menu';
 import { Filters } from './components/filter';
 import { Sort } from './components/sort';
-import { EventList } from './components/event-list';
+import { EventList } from './components/eventList';
 import { Event } from './components/event';
-import { EventEdit } from './components/event-edit';
+import { EventEdit } from './components/eventEditor';
 
 const render = (container, html, place = `beforeend`) => {
 	container.insertAdjacentHTML(place, html);
