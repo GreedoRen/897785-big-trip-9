@@ -1,30 +1,56 @@
-import { Info } from './components/info';
-import { Menu } from './components/menu';
-import { Filters } from './components/filter';
-import { Sort } from './components/sort';
-import { EventList } from './components/eventList';
-import { Event } from './components/event';
-import { EventEdit } from './components/eventEditor';
+import {info} from './components/info';
+import {menu} from './components/menu';
+import {filters} from './components/filter';
+import {sort} from './components/sort';
+import {eventList} from './components/eventList';
+import {event} from './components/event';
+import {eventEdit} from './components/eventEditor';
+import {cityEvent, dateEvent, events} from "./utils/event";
+import {dataMenu} from "./utils/menu";
+import {dataFilters} from "./utils/filters";
+
 
 const render = (container, html, place = `beforeend`) => {
-	container.insertAdjacentHTML(place, html);
+  container.insertAdjacentHTML(place, html);
+};
+const renderEvents = (containers, template, data, place = `beforeend`) => {
+  containers.forEach((container) => {
+    data.forEach((i) => container.insertAdjacentHTML(place, template(i)));
+  });
+};
+const renderMenu = (container, template, data, place = `afterend`) => {
+  container.insertAdjacentHTML(place, template(data));
+};
+const renderFilers = (container, template, data, place = `afterend`) => {
+  container.insertAdjacentHTML(place, template(data));
+};
+const renderEventList = (container, template, data, place = `beforeend`) => {
+  container.insertAdjacentHTML(place, template(data));
+};
+const renderTripInfo = (container, template, data, place = `afterbegin`) => {
+  container.insertAdjacentHTML(place, template(data));
+};
+const renderEventEdit = (container, template, data, place = `afterbegin`) => {
+  container.insertAdjacentHTML(place, template(data));
+};
+const pushCostSumm = (element, data) => {
+  element.innerHTML = data.reduce((value, currentItem) => {
+    return value + currentItem.price;
+  }, 0);
 };
 
 const tripInfoSection = document.querySelector(`section.trip-main__trip-info`);
-render(tripInfoSection, Info(), `afterbegin`);
-
 const tripControlsHeadings = document.querySelectorAll(`.trip-main__trip-controls h2`);
-render(tripControlsHeadings[0], Menu(), `afterend`);
-render(tripControlsHeadings[1], Filters(), `afterend`);
-
-const eventListTempContainer = document.createElement(`div`);
-render(eventListTempContainer, EventList());
-
-const tripEventsList = eventListTempContainer.querySelector(` ul.trip-events__list`);
-render(tripEventsList, EventEdit());
-for (let i = 3; i > 0; i--) {
-	render(tripEventsList, Event());
-}
-
 const tripEventsSection = document.querySelector(`section.trip-events`);
-render(tripEventsSection, Sort() + eventListTempContainer.innerHTML);
+const costValueElement = document.querySelector(`.trip-info__cost-value`);
+const eventListTempContainer = document.createElement(`div`);
+
+renderTripInfo(tripInfoSection, info, cityEvent);
+renderMenu(tripControlsHeadings[0], menu, dataMenu); //
+renderFilers(tripControlsHeadings[1], filters, dataFilters); //
+renderEventList(eventListTempContainer, eventList, dateEvent);
+const tripEventsList = eventListTempContainer.querySelectorAll(`.trip-events__list`);
+renderEventEdit(tripEventsList[0], eventEdit, events[0]);
+renderEvents(tripEventsList, event, events);
+render(tripEventsSection, sort() + eventListTempContainer.innerHTML);
+pushCostSumm(costValueElement, events);
