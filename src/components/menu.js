@@ -1,5 +1,15 @@
-export const menu = (data) => `
-  <nav class="trip-controls__trip-tabs  trip-tabs">
-    ${data.length > 0 ? data.map((i) => `<a class="trip-tabs__btn ${i.isActive ? `trip-tabs__btn--active` : ``}" href="#">${i.title}</a>`).join(``) : ``}
-  </nav>
-`;
+import AbstractComponent from '../components/absctractComponent.js';
+
+export default class Menu extends AbstractComponent {
+  constructor() {
+    super();
+  }
+
+  getTemplate() {
+    return `
+      <nav class="trip-controls__trip-tabs  trip-tabs">
+        <a class="trip-tabs__btn  trip-tabs__btn--active" href="#">Table</a>
+        <a class="trip-tabs__btn" href="#">Stats</a>
+      </nav>`.trim();
+  }
+}
