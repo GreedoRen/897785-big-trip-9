@@ -1,4 +1,4 @@
-import AbstractComponent from '../components/absctractComponent.js';
+import AbstractComponent from '../components/absctract-component.js';
 
 export default class Menu extends AbstractComponent {
   constructor() {
@@ -13,3 +13,4 @@ export default class Menu extends AbstractComponent {
       </nav>`.trim();
   }
 }
+
