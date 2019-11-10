@@ -1,4 +1,4 @@
-import AbstractComponent from '../components/absctractComponent.js';
+import AbstractComponent from '../components/absctract-component.js';
 import moment from 'moment';
 
 export default class TripInfo extends AbstractComponent {
@@ -26,7 +26,7 @@ export default class TripInfo extends AbstractComponent {
 
   getTemplate() {
     return `
-      <div class="trip-info__main">
+      <div class="trip-info__main"> 
         <h1 class="trip-info__title">${this._cards.length ? `${this.getRouteTemplate(this._cards)}` : ``}</h1>
         <p class="trip-info__dates">
         ${this._cards.length ? `

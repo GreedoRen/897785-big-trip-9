@@ -1,9 +1,9 @@
-import Sorting from "../components/sort.js";
-import Card from "../components/card.js";
-import CardEdit from "../components/cardEdit.js";
+import Sorting from "../components/sorting.js";
 import Day from "../components/day.js";
-import DayList from "../components/dayList.js";
-import {Position, KeyCode, render} from "../utils.js";
+import DayList from "../components/day-list.js";
+import CardController from "../controllers/card.js";
+import {Position, render, unrender} from "../utils.js";
+import moment from 'moment';
 
 export default class TripController {
   constructor(container, cards) {
@@ -11,25 +11,30 @@ export default class TripController {
     this._cards = cards;
     this._dayList = new DayList();
     this._sorting = new Sorting();
+    this._subscriptions = [];
+    this._onChangeView = this._onChangeView.bind(this);
+    this._onDataChange = this._onDataChange.bind(this);
   }
 
   init() {
     if (this._cards.length) {
-      this._renderContent();
+      render(this._container, this._sorting.getElement(), Position.BEFOREEND);
+      this._renderDayList(this._cards);
     } else {
       this._renderEmptyMessage();
     }
     this._getTotalSum(this._cards);
+    this._sorting.getElement().addEventListener(`click`, (evt) => this._onSortClick(evt));
   }
 
-  _renderContent() {
-    render(this._container, this._sorting.getElement(), Position.BEFOREEND);
+  _renderDayList(cards) {
+    this._clearDayList();
+
     render(this._container, this._dayList.getElement(), Position.BEFOREEND);
-    this._renderDayList();
-  }
+    document.querySelector(`#sort-day`).classList.remove(`visually-hidden`);
 
-  _renderDayList() {
-    const cardEventsByDate = this._cards.reduce((day, card) => {
+
+    const cardEventsByDate = cards.reduce((day, card) => {
       if (day[card.startTime]) {
         day[card.startTime].push(card);
       } else {
@@ -39,49 +44,91 @@ export default class TripController {
       return day;
     }, {});
 
-    Object.entries(cardEventsByDate).forEach(([date, cards], i) => {
-      const day = new Day(date, i, cards);
+    const cardEventsByDateSorted = Object.entries(cardEventsByDate).sort((a, b) => {
+      if (moment(a[0]).isBefore(b[0])) {
+        return -1;
+      }
+      if (moment(a[0]).isAfter(b[0])) {
+        return 1;
+      }
+      return 0;
+    });
 
-      cards.forEach((card, j) => {
-        const cardContainer = day.getElement().querySelectorAll(`.trip-events__item`)[j];
-        this._renderCard(cardContainer, card);
+    cardEventsByDateSorted.forEach(([date, cardsItems]) => {
+      const sortedByStartTimeCards = cardsItems.slice().sort((a, b) => {
+        if (moment(a.startTime).isBefore(b.startTime)) {
+          return -1;
+        }
+        if (moment(a.startTime).isAfter(b.startTime)) {
+          return 1;
+        }
+        return 0;
       });
-
-      render(this._dayList.getElement(), day.getElement(), Position.BEFOREEND);
+      this._renderCardList(sortedByStartTimeCards, date);
     });
   }
 
+  _renderCardList(cards, date) {
+    const day = new Day(cards, date);
+
+    cards.forEach((card, i) => {
+      const cardContainer = day.getElement().querySelectorAll(`.trip-events__item`)[i];
+      this._renderCard(cardContainer, card);
+    });
+
+    render(this._dayList.getElement(), day.getElement(), Position.BEFOREEND);
+  }
+
   _renderCard(container, cardMock) {
-    const card = new Card(cardMock);
-    const cardEdit = new CardEdit(cardMock);
-    const onEscKeyDown = (evt) => {
-      if (evt.key === KeyCode.ESCAPE || evt.key === KeyCode.ESC) {
-        container.replaceChild(card.getElement(), cardEdit.getElement());
-        document.removeEventListener(`keydown`, onEscKeyDown);
-      }
-    };
+    const cardController = new CardController(container, cardMock, this._onDataChange, this._onChangeView);
+    this._subscriptions.push(cardController.setDefaultView.bind(cardController));
+  }
 
-    card.getElement()
-      .querySelector(`.event__rollup-btn`)
-      .addEventListener(`click`, () => {
-        container.replaceChild(cardEdit.getElement(), card.getElement());
-        document.addEventListener(`keydown`, onEscKeyDown);
-      });
+  _onDataChange(newData, oldData) {
+    this._cards[this._cards.findIndex((it) => it === oldData)] = newData;
+    this._renderDayList(this._cards);
+  }
 
-    cardEdit.getElement()
-      .addEventListener(`submit`, () => {
-        container.replaceChild(card.getElement(), cardEdit.getElement());
-        document.removeEventListener(`keydown`, onEscKeyDown);
-      });
+  _onChangeView() {
+    this._subscriptions.forEach((it) => it());
+  }
 
-    render(container, card.getElement(), Position.BEFOREEND);
+  _onSortClick(evt) {
+    if (evt.target.tagName !== `LABEL`) {
+      return;
+    }
+
+    this._dayList.getElement().innerHTML = ``;
+    document.querySelector(`#sort-day`).classList.add(`visually-hidden`);
+
+    switch (evt.target.dataset.sortType) {
+      case `time`:
+        const sortedByTimeCards = this._cards.slice().sort((a, b) => {
+          if (moment(a.startTime).isBefore(b.startTime)) {
+            return -1;
+          }
+          if (moment(a.startTime).isAfter(b.startTime)) {
+            return 1;
+          }
+          return 0;
+        });
+        this._renderCardList(sortedByTimeCards);
+        break;
+      case `price`:
+        const sortedByPriceCards = this._cards.slice().sort((a, b) => a.price - b.price);
+        this._renderCardList(sortedByPriceCards);
+        break;
+      case `default`:
+        this._renderDayList(this._cards);
+        break;
+    }
   }
 
   _getTotalSum(cardsItems) {
     const sumMain = cardsItems.map(({price}) => price).reduce((sum, current) => {
       return sum + current;
     }, 0);
-    const allOffers = cardsItems.map(({offers}) => Array.from(offers));
+    const allOffers = cardsItems.map(({type}) => type.offers);
     const appliedOffers = allOffers.map((item) => item.filter(({isApplied}) => isApplied));
     const offersPrices = appliedOffers.map((items) => items.map((item) => item.price));
     const offersPricesTotals = offersPrices.map((prices) => prices.reduce((sum, current) => {
@@ -98,4 +145,10 @@ export default class TripController {
   _renderEmptyMessage() {
     this._container.insertAdjacentHTML(`beforeend`, `<p class="trip-events__msg">Click New Event to create your first point</p>`);
   }
+
+  _clearDayList() {
+    unrender(this._dayList.getElement());
+    this._dayList.removeElement();
+  }
+
 }
