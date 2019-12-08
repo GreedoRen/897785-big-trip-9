@@ -1,14 +1,14 @@
-import {monthNames} from '../utils.js';
-import AbstractComponent from '../components/absctractComponent.js';
+import AbstractComponent from '../components/absctract-component.js';
+import moment from 'moment';
 
 export default class TripInfo extends AbstractComponent {
   constructor(cards) {
     super();
-    this._cards = cards;
+    this._cards = cards.slice().sort((a, b) => a.startTime - b.startTime);
   }
 
   getRouteTemplate(cards) {
-    const cities = cards.map(({city}) => city);
+    const cities = cards.map(({city}) => city.name);
     const count = cities.length;
     let result;
     switch (count) {
@@ -26,13 +26,13 @@ export default class TripInfo extends AbstractComponent {
 
   getTemplate() {
     return `
-      <div class="trip-info__main">
+      <div class="trip-info__main"> 
         <h1 class="trip-info__title">${this._cards.length ? `${this.getRouteTemplate(this._cards)}` : ``}</h1>
         <p class="trip-info__dates">
         ${this._cards.length ? `
-          ${monthNames[new Date(this._cards[0].startTime).getMonth()]} ${new Date(this._cards[0].startTime).getDate()}
+          ${moment(this._cards[0].startTime).format(`MMM`)} ${moment(this._cards[0].startTime).format(`d`)}
           &nbsp;&mdash;&nbsp;
-          ${monthNames[new Date(this._cards[this._cards.length - 1].endTime).getMonth()]} ${new Date(this._cards[this._cards.length - 1].endTime).getDate()}` : ``}
+          ${moment(this._cards[this._cards.length - 1].endTime).format(`MMM`)} ${moment(this._cards[this._cards.length - 1].endTime).format(`d`)}` : ``}
         </p>
       </div>`.trim();
   }

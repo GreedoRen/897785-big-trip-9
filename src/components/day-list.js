@@ -1,4 +1,4 @@
-import AbstractComponent from '../components/absctractComponent.js';
+import AbstractComponent from '../components/absctract-component.js';
 
 export default class DayList extends AbstractComponent {
   constructor() {
