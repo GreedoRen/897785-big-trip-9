@@ -1,7 +1,7 @@
 # Личный проект «Большое путешествие» [![Build status][travis-image]][travis-url]
 
-* Студент: [Аникин Никита](https://up.htmlacademy.ru/ecmascript/9/user/897785).
-* Наставник: `Неизвестно`.
+* Студент: 
+* Наставник: 
 
 ---
 
