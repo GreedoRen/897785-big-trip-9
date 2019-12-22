@@ -20,7 +20,7 @@ export default class Card extends AbstractComponent {
           <img class="event__type-icon" width="42" height="42" src="img/icons/${this._type.id}.png" alt="Event type icon">
         </div>
         <h3 class="event__title">${this._type.title} ${this._type.placeholder} ${this._city}</h3>
-
+  
         <div class="event__schedule">
           <p class="event__time">
             <time class="event__start-time" datetime="${moment(this._startTime).format()}">
@@ -35,11 +35,11 @@ export default class Card extends AbstractComponent {
           ${getDurationString(this._startTime, this._endTime)}
           </p>
         </div>
-
+  
         <p class="event__price">
           &euro;&nbsp;<span class="event__price-value">${this._price}</span>
         </p>
-
+  
         <h4 class="visually-hidden">Offers:</h4>
         ${this._offers.length ? `
           ${`<ul class="event__selected-offers">

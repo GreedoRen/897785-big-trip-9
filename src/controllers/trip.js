@@ -3,7 +3,7 @@ import Day from "../components/day.js";
 import DayList from "../components/day-list.js";
 import CardController from "../controllers/card.js";
 import {types} from '../models/model-types.js';
-import {Position, Mode, render, unrender} from "../utils.js";
+import {Position, Mode, render, unrender, getDuration, sortMomentDates} from "../utils.js";
 import moment from 'moment';
 
 export default class TripController {
@@ -19,9 +19,7 @@ export default class TripController {
     this._activateAddCardBtn = this._activateAddCardBtn.bind(this);
     this._addCardBtn = document.querySelector(`.trip-main__event-add-btn`);
 
-    this._addCardBtn.addEventListener(`click`, () => {
-      this._createCard();
-    });
+    this._onNewEventClick();
   }
 
   hide() {
@@ -37,6 +35,10 @@ export default class TripController {
     }
   }
 
+  onFilterSwitch(cards) {
+    this._renderCards(cards);
+  }
+
   _setCards(cards) {
     this._cards = cards;
     this._subscriptions = [];
@@ -47,21 +49,22 @@ export default class TripController {
 
   _renderCards(cards) {
     this._container.innerHTML = ``;
+    this._clearSorting();
     this._clearDayList();
     if (cards.length) {
       render(this._container, this._sorting.getElement(), Position.BEFOREEND);
+      this._sorting.getElement().addEventListener(`click`, (evt) => this._onSortClick(evt, cards));
       this._renderDayList(cards);
     } else {
       this._renderEmptyMessage();
     }
-    this._sorting.getElement().addEventListener(`click`, (evt) => this._onSortClick(evt, cards));
-  }
-
-  onFilterSwitch(cards) {
-    this._renderCards(cards);
   }
 
   _createCard() {
+    if (this._container.querySelector(`.trip-events__msg`)) {
+      this._container.querySelector(`.trip-events__msg`).remove();
+    }
+
     const defaultCard = {
       type: types[0],
       city: {},
@@ -72,7 +75,13 @@ export default class TripController {
     };
 
     const cardContainer = document.createElement(`div`);
-    render(this._sorting.getElement(), cardContainer, Position.AFTER);
+    const tripContainer = document.querySelector(`.trip-events`);
+
+    if (this._cards.length) {
+      render(this._sorting.getElement(), cardContainer, Position.AFTER);
+    } else {
+      render(tripContainer, cardContainer, Position.BEFOREEND);
+    }
 
     this._creatingCard = new CardController(cardContainer, defaultCard, Mode.ADDING, this._onDataChange, this._onChangeView, this._activateAddCardBtn);
     this._onChangeView();
@@ -84,7 +93,7 @@ export default class TripController {
     document.querySelector(`#sort-day`).classList.remove(`visually-hidden`);
 
 
-    const cardEventsByDate = cards.reduce((day, card) => {
+    const byDateCardEvents = cards.reduce((day, card) => {
       if (day[moment(card.startTime).format(`MM-DD-YYYY`)]) {
         day[moment(card.startTime).format(`MM-DD-YYYY`)].push(card);
       } else {
@@ -94,26 +103,10 @@ export default class TripController {
       return day;
     }, {});
 
-    const cardEventsByDateSorted = Object.entries(cardEventsByDate).sort((a, b) => {
-      if (moment(a[0]).isBefore(b[0])) {
-        return -1;
-      }
-      if (moment(a[0]).isAfter(b[0])) {
-        return 1;
-      }
-      return 0;
-    });
+    const byDateSortedCardEvents = Object.entries(byDateCardEvents).sort((a, b) => sortMomentDates(a[0], b[0]));
 
-    cardEventsByDateSorted.forEach(([date, cardsItems]) => {
-      const sortedByStartTimeCards = cardsItems.slice().sort((a, b) => {
-        if (moment(a.startTime).isBefore(b.startTime)) {
-          return -1;
-        }
-        if (moment(a.startTime).isAfter(b.startTime)) {
-          return 1;
-        }
-        return 0;
-      });
+    byDateSortedCardEvents.forEach(([date, cardsItems]) => {
+      const sortedByStartTimeCards = cardsItems.slice().sort((a, b) => sortMomentDates(a.startTime, b.startTime));
       this._renderCardList(sortedByStartTimeCards, date);
     });
   }
@@ -134,43 +127,8 @@ export default class TripController {
     this._subscriptions.push(cardController.setDefaultView.bind(cardController));
   }
 
-  _onChangeView() {
-    this._subscriptions.forEach((it) => it());
-  }
-
   _activateAddCardBtn() {
     this._addCardBtn.removeAttribute(`disabled`);
-  }
-
-  _onSortClick(evt, cards) {
-    if (evt.target.tagName !== `LABEL`) {
-      return;
-    }
-
-    this._dayList.getElement().innerHTML = ``;
-    document.querySelector(`#sort-day`).classList.add(`visually-hidden`);
-
-    switch (evt.target.dataset.sortType) {
-      case `time`:
-        const sortedByTimeCards = cards.slice().sort((a, b) => {
-          if (moment(a.startTime).isBefore(b.startTime)) {
-            return -1;
-          }
-          if (moment(a.startTime).isAfter(b.startTime)) {
-            return 1;
-          }
-          return 0;
-        });
-        this._renderCardList(sortedByTimeCards);
-        break;
-      case `price`:
-        const sortedByPriceCards = cards.slice().sort((a, b) => a.price - b.price);
-        this._renderCardList(sortedByPriceCards);
-        break;
-      case `default`:
-        this._renderDayList(cards);
-        break;
-    }
   }
 
   _getTotalSum(cardsItems) {
@@ -192,11 +150,55 @@ export default class TripController {
   }
 
   _renderEmptyMessage() {
-    this._container.insertAdjacentHTML(`beforeend`, `<p class="trip-events__msg">Click New Event to create your first point</p>`);
+    const emptyMessageHTML = `<p class="trip-events__msg">Click New Event to create your first point</p>`;
+    this._container.insertAdjacentHTML(Position.BEFOREEND, emptyMessageHTML);
   }
 
   _clearDayList() {
     unrender(this._dayList.getElement());
     this._dayList.removeElement();
+  }
+
+  _clearSorting() {
+    unrender(this._sorting.getElement());
+    this._sorting.removeElement();
+  }
+
+  _onChangeView() {
+    this._subscriptions.forEach((it) => it());
+  }
+
+  _onNewEventClick() {
+    this._addCardBtn.addEventListener(`click`, () => {
+      this._createCard();
+    });
+  }
+
+  _onSortClick(evt, cards) {
+    if (evt.target.tagName !== `LABEL`) {
+      return;
+    }
+
+    this._dayList.getElement().innerHTML = ``;
+    document.querySelector(`#sort-day`).classList.add(`visually-hidden`);
+
+    switch (evt.target.dataset.sortType) {
+      case `time`:
+        const sortedByTimeCards = cards.slice().sort((a, b) => {
+          const aDuration = getDuration(a.startTime, a.endTime);
+          const bDuration = getDuration(b.startTime, b.endTime);
+
+          return bDuration - aDuration;
+        });
+        this._renderCardList(sortedByTimeCards);
+        break;
+      case `price`:
+        const sortedByPriceCards = cards.slice().sort((a, b) => b.price - a.price);
+        this._renderCardList(sortedByPriceCards);
+        break;
+      case `default`:
+        this._renderDayList(cards);
+        break;
+    }
   }
 }
